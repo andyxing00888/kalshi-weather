@@ -1,0 +1,41 @@
+name: paper-trade
+
+on:
+  schedule:
+    - cron: "5 * * * *"    # hourly: log orders for events ~30/24/18h before close
+    - cron: "45 15 * * *"  # daily: score settled orders and write the report
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "log, score, or both"
+        default: both
+
+permissions:
+  contents: write
+
+concurrency:
+  group: paper-trade
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Log
+        if: github.event.schedule == '5 * * * *' || (github.event_name == 'workflow_dispatch' && inputs.task != 'score')
+        run: python3 paper/trader.py log
+      - name: Score and report
+        if: github.event.schedule == '45 15 * * *' || (github.event_name == 'workflow_dispatch' && inputs.task != 'log')
+        run: python3 paper/trader.py score && python3 paper/report.py
+      - name: Commit
+        run: |
+          git config user.name "paper-trade-bot"
+          git config user.email "paper-trade-bot@users.noreply.github.com"
+          git add paper/data paper/reports paper/README.md
+          git diff --cached --quiet || git commit -m "paper: $(date -u +%Y-%m-%dT%H:%MZ)"
+          git pull --rebase && git push
