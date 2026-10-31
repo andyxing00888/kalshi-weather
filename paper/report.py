@@ -1,7 +1,7 @@
 """Daily paper-trading report.
 
   python3 paper/report.py [YYYY-MM-DD]   (default: today UTC)
-Writes paper/reports/<date>.md (that day's settlements + cumulative stats) and paper/README.md
+Writes paper/reports/<date>.md (that day's settlements + cumulative stats) and README.md
 (cumulative scoreboard, links to recent reports).
 """
 import collections, os, sys
@@ -9,10 +9,12 @@ from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import dashboard  # noqa: E402
 from common import boot, mean  # noqa: E402
 from strategies import RULES  # noqa: E402
 from trader import read, ORDERS, SCORED  # noqa: E402
 
+sys.path.insert(0, os.path.dirname(HERE))
 REPORTS = os.path.join(HERE, "reports")
 MIN_FILLS = 100  # fills before a verdict
 
@@ -56,6 +58,55 @@ def stats_by_strategy(scored):
                          total=f"${sum(xs):+.2f}" if xs else "$0.00",
                          verdict=verdict(len(f), lo, hi), _total=sum(xs)))
     return rows
+
+
+def summary_lines(byday, today, tf, day_pnl):
+    M = dashboard.metrics(byday)
+    if not M["n"]:
+        return ["_No filled contracts yet._"]
+    pf = "∞" if M["pf"] == float("inf") else f"{M['pf']:.2f}"
+    icon = lambda x: "🟢" if x > 0 else "🔴" if x < 0 else "⚪"
+    return [f"| Metric | Value |", "|---|--:|",
+            f"| {icon(M['total'])} Total P&L | **${M['total']:+.2f}** over {M['n']} fills |",
+            f"| {icon(M['per'])} P&L / contract | {money(M['per'])} |",
+            f"| Win rate | {M['win']:.0%} |",
+            f"| Profit factor | {pf} |",
+            f"| Max drawdown | -${M['mdd']:.2f} |",
+            f"| Sharpe (ann.) | {M['sharpe']:.2f} |" if len(M["days"]) > 1 else "| Sharpe (ann.) | — |",
+            f"| {icon(day_pnl)} Today | ${day_pnl:+.2f} ({len(tf)} fills) |"]
+
+
+def experiment_lines():
+    """One-line status of the non-rule experiments that log on their own."""
+    import lip
+    from analyze import fee
+    rows = []
+    try:
+        L = lip.report(quiet=True)
+        if L:
+            rows.append(("Liquidity rewards (`lip.py`), 300/side on watchlist", f"{L['runs']} runs / ~{L['hours']:.0f}h",
+                         f"rewards ${L['reward']:,.2f}, fills ${L['fill_pnl']:+,.2f} "
+                         f"({L['settled']:g} settled, {L['open']:g} open) → **net ${L['net']:+,.2f}**"))
+    except Exception as e:  # network or file trouble must not break the report
+        rows.append(("Liquidity rewards (`lip.py`)", "—", f"error: {e}"))
+    c = read(os.path.join(HERE, "data", "consistency.csv"))
+    if c:
+        arbs = [r for r in c if r["arb"] == "1"]
+        best = max(float(r["edge"]) for r in c)
+        rows.append(("S&P/Nasdaq cross-series arb (`consistency.py`)", f"{len({r['utc'] for r in c})} runs",
+                     f"{len(arbs)} arbs after fees, best edge {best * 100:+.1f}¢"))
+    x = read(os.path.join(HERE, "data", "xvenue.csv"))
+    if x:
+        f = lambda v: float(v) if v not in ("", None) else None
+        n = 0
+        for r in x:
+            kb, ka, pb, pa = f(r["k_bid"]), f(r["k_ask"]), f(r["p_bid"]), f(r["p_ask"])
+            if ka and pb and 0 < ka < 1 and 0 < pb < 1:
+                o = 1 - pb
+                n += 1 - ka - o - fee(ka) - 0.05 * o * (1 - o) > 0  # Polymarket sports taker fee
+        rows.append(("Kalshi vs Polymarket sports (`xvenue.py`)", f"{len({r['utc'] for r in x})} runs",
+                     f"{len(x)} team quotes, {n} buy-Kalshi arbs after fees"))
+    return [table(rows, ["Experiment", "Data", "Status"])] if rows else []
 
 
 def main():
@@ -116,16 +167,24 @@ def main():
         f.write("\n".join(L) + "\n")
 
     recent = sorted((x[:-3] for x in os.listdir(REPORTS) if x.endswith(".md")), reverse=True)[:14]
-    R = ["# Kalshi weather paper trading", "",
+    R = ["# Kalshi paper trading", "",
          "Forward test of forecast-free rules on Kalshi daily-high temperature markets "
-         "(rules in [strategies.py](strategies.py); backtest in [explore.py](explore.py)). No real money.", "",
-         f"## Scoreboard (as of {day})", "",
+         "(rules in [strategies.py](paper/strategies.py); backtest in [explore.py](paper/explore.py)). No real money.", "",
+         f"## Summary (as of {day})", "",
+         *summary_lines(byday, today, tf, day_pnl), "",
+         "Full dashboard: https://functionalleaf.github.io/kalshi-weather/", "",
+         "## Other experiments", "", *experiment_lines(), "",
+         "## Scoreboard", "",
          table([(r["name"], r["fills"], r["per"], r["ci"], r["total"], r["verdict"]) for r in cum],
                ["Strategy", "Fills", "P&L / contract", "95% CI", "Total", "Verdict"]) if cum else "_No settled orders yet._",
-         "", "## Daily reports", ""] + [f"- [{d}](reports/{d}.md)" for d in recent]
-    with open(os.path.join(HERE, "README.md"), "w") as f:
+         "", "## Daily reports", ""] + [f"- [{d}](paper/reports/{d}.md)" for d in recent]
+    with open(os.path.join(os.path.dirname(HERE), "README.md"), "w") as f:
         f.write("\n".join(R) + "\n")
-    print("wrote", os.path.join("paper", "reports", f"{day}.md"))
+    docs = os.path.join(os.path.dirname(HERE), "docs")
+    os.makedirs(docs, exist_ok=True)
+    with open(os.path.join(docs, "index.html"), "w") as f:
+        f.write(dashboard.render(orders, scored, cum, day, MIN_FILLS))
+    print("wrote", os.path.join("paper", "reports", f"{day}.md"), "and docs/index.html")
 
 
 if __name__ == "__main__":

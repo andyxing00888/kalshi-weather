@@ -2,13 +2,15 @@
 
 Usage: python3 pull_markets.py [max_days_per_series]
 Writes data/markets.csv and data/candles.csv (resumable; cached per market).
+Other series: SERIES=KXTSAD,KXAAAGASD OUT=econ python3 pull_markets.py -> data/econ_markets.csv etc.
 """
 import calendar, csv, json, os, sys, time, urllib.parse, urllib.request
 
 BASE = "https://api.elections.kalshi.com/trade-api/v2"
 DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-SERIES = ["KXHIGHNY", "KXHIGHCHI", "KXHIGHMIA", "KXHIGHAUS", "KXHIGHLAX",
-          "KXHIGHDEN", "KXHIGHPHIL"]
+SERIES = os.environ.get("SERIES", "").split(",") if os.environ.get("SERIES") else [
+    "KXHIGHNY", "KXHIGHCHI", "KXHIGHMIA", "KXHIGHAUS", "KXHIGHLAX", "KXHIGHDEN", "KXHIGHPHIL"]
+PREFIX = os.environ["OUT"] + "_" if os.environ.get("OUT") else ""
 
 
 def get(path, **params):
@@ -76,7 +78,7 @@ def main():
                     ask_close=g("yes_ask", "close_dollars"),
                     volume=c.get("volume_fp")))
     for name, rows in (("markets", mrows), ("candles", crows)):
-        with open(os.path.join(DATA, f"{name}.csv"), "w", newline="") as f:
+        with open(os.path.join(DATA, f"{PREFIX}{name}.csv"), "w", newline="") as f:
             w = csv.DictWriter(f, fieldnames=list(rows[0]))
             w.writeheader()
             w.writerows(rows)

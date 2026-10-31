@@ -10,13 +10,17 @@ from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from common import get, fnum, fill_pnl, SERIES  # noqa: E402
-from strategies import RULES  # noqa: E402
+from common import get, fnum, fill_pnl, SERIES, ECON_SERIES, DIV_SERIES  # noqa: E402
+from strategies import RULES, ECON_RULES, DIV_RULES  # noqa: E402
 
 DATA = os.path.join(HERE, "data")
 ORDERS = os.path.join(DATA, "orders.csv")
 SCORED = os.path.join(DATA, "scored.csv")
 HORIZONS = [30, 24, 18]
+ECON_HORIZONS = [12, 6]
+# (series, horizons, rules) for each group traded
+DIV_HORIZONS = [24, 6]
+BOOKS = [(SERIES, HORIZONS, RULES), (ECON_SERIES, ECON_HORIZONS, ECON_RULES), (DIV_SERIES, DIV_HORIZONS, DIV_RULES)]
 OFIELDS = ["logged_utc", "log_ts", "hours_to_close", "rule", "H", "series", "event", "ticker",
            "side", "price", "bid", "ask", "mid"]
 SFIELDS = OFIELDS + ["scored_utc", "result", "filled", "pnl"]
@@ -59,14 +63,14 @@ def log():
     stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
     seen = {(r["rule"], r["H"], r["event"]) for r in read(ORDERS)}
     new, snaps = [], 0
-    for s in SERIES:
+    for s, horizons, rules in ((s, h, r) for ss, h, r in BOOKS for s in ss):
         events = collections.defaultdict(list)
         for m in get("/markets", series_ticker=s, status="open", limit=1000)["markets"]:
             events[m["event_ticker"]].append(m)
         for ev, ms in events.items():
             h = (ts(ms[0]["close_time"]) - now) / 3600
-            H = next((H for H in HORIZONS if H - 1 <= h < H + 1.5), None)
-            if H is None or all((r, str(H), ev) in seen for r in RULES):
+            H = next((H for H in horizons if H - 1 <= h < H + 1.5), None)
+            if H is None or all((r, str(H), ev) in seen for r in rules):
                 continue
             key = lambda m: -1000.0 if m["strike_type"] == "less" else float(m.get("floor_strike") or -999)
             snap = []
@@ -74,9 +78,10 @@ def log():
                 b, a = fnum(m.get("yes_bid_dollars")) or 0.0, fnum(m.get("yes_ask_dollars")) or 1.0
                 snap.append(dict(ticker=m["ticker"], strike_type=m["strike_type"],
                                  floor=m.get("floor_strike"), cap=m.get("cap_strike"), bid=b, ask=a,
-                                 mid=(a + b) / 2, prev_mid=prev_mid(s, m["ticker"], now)))
+                                 mid=(a + b) / 2,  # only the weather rules (fade/follow_move) use prev_mid
+                                 prev_mid=prev_mid(s, m["ticker"], now) if rules is RULES else None))
             snaps += 1
-            for name, rule in RULES.items():
+            for name, rule in rules.items():
                 if (name, str(H), ev) in seen:
                     continue
                 for t, side in rule(snap).items():

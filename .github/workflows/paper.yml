@@ -20,7 +20,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -29,13 +29,24 @@ jobs:
       - name: Log
         if: github.event.schedule == '5 * * * *' || (github.event_name == 'workflow_dispatch' && inputs.task != 'score')
         run: python3 paper/trader.py log
+      - name: Arb scans (S&P/Nasdaq cross-series, Kalshi vs Polymarket sports)
+        if: github.event.schedule == '5 * * * *' || (github.event_name == 'workflow_dispatch' && inputs.task != 'score')
+        continue-on-error: true
+        run: |
+          python3 consistency.py log || echo "consistency scan failed"
+          python3 lip.py track || echo "lip track failed"
+          python3 xvenue.py log
       - name: Score and report
         if: github.event.schedule == '45 15 * * *' || (github.event_name == 'workflow_dispatch' && inputs.task != 'log')
         run: python3 paper/trader.py score && python3 paper/report.py
+      - name: Refresh liquidity-reward watchlist
+        if: github.event.schedule == '45 15 * * *' || (github.event_name == 'workflow_dispatch' && inputs.task != 'log')
+        continue-on-error: true
+        run: mkdir -p data && python3 lip.py 300 && python3 lip.py watch && python3 lip.py report
       - name: Commit
         run: |
           git config user.name "paper-trade-bot"
           git config user.email "paper-trade-bot@users.noreply.github.com"
-          git add paper/data paper/reports paper/README.md
+          git add paper/data paper/reports README.md docs
           git diff --cached --quiet || git commit -m "paper: $(date -u +%Y-%m-%dT%H:%MZ)"
           git pull --rebase && git push

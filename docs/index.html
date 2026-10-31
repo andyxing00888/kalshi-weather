@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kalshi Weather Paper Trading</title>
+<style>
+:root{--bg:#0b0f17;--panel:#131a26;--line:#222b3b;--fg:#e6edf6;--mut:#8a97ab;--g:#16a34a;--r:#dc2626}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:28px 16px 60px}
+h1{font-size:24px;margin:0}h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:34px 0 12px}
+.top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px}
+.muted,.sub,.ax{color:var(--mut)}.sub{font-size:12px}.ax{fill:var(--mut);font-size:11px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px}
+.card,.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.lbl{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+.val{font-size:26px;font-weight:700;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+.pos{color:#4ade80}.neg{color:#f87171}.flat{color:var(--mut)}
+.chart{width:100%;height:auto;display:block}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-bottom:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}th{font-size:12px;color:var(--mut);font-weight:600}
+tbody tr:hover{background:#182032}.scroll{overflow-x:auto}
+.pill{padding:2px 9px;border-radius:99px;font-size:12px;background:#1f2937}
+.pill.pos{background:#14532d;color:#86efac}.pill.neg{background:#7f1d1d;color:#fca5a5}
+</style></head><body><div class="wrap">
+<div class="top"><div><h1>Kalshi Weather · Paper Trading</h1>
+<div class="muted">Forecast-free rules on daily-high temperature markets · simulated maker orders · no real money</div></div>
+<div class="muted">As of 2026-10-31 (UTC)</div></div>
+<h2>Performance</h2><div class="grid"><div class="card"><div class="lbl">Total P&L</div><div class="val flat">+$0.00</div><div class="sub">0 filled contracts</div></div><div class="card"><div class="lbl">P&L / contract</div><div class="val flat">+0.0¢</div><div class="sub">after maker fee</div></div><div class="card"><div class="lbl">Win rate</div><div class="val ">—</div><div class="sub">avg win +0.0¢ · avg loss +0.0¢</div></div><div class="card"><div class="lbl">Profit factor</div><div class="val ">—</div><div class="sub">gross wins / gross losses</div></div><div class="card"><div class="lbl">Sharpe (ann.)</div><div class="val flat">—</div><div class="sub">daily P&L, √365</div></div><div class="card"><div class="lbl">Max drawdown</div><div class="val ">—</div><div class="sub">peak to trough</div></div><div class="card"><div class="lbl">Best / worst day</div><div class="val ">—</div><div class="sub">0 of 0 days green</div></div><div class="card"><div class="lbl">Open orders</div><div class="val ">10</div><div class="sub">10 logged · 0 settled</div></div></div>
+<h2>Cumulative P&amp;L</h2><div class="panel"><p class="muted">Charts appear once the first orders settle.</p></div>
+<h2>Daily P&amp;L</h2><div class="panel"><p class="muted">No settled days yet.</p></div>
+<h2>Strategies</h2><div class="panel scroll"><p class="muted">No settled orders yet — first results arrive after markets close.</p><p class="sub">Verdict needs 100+ fills; CI is 95%, resampled by event.</p></div>
+<h2>Recent fills</h2><div class="panel scroll"><p class="muted">No fills yet.</p></div>
+</div></body></html>
