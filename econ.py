@@ -9,7 +9,7 @@ Usage: python3 econ.py [hours_before_close ...]   (default 2 6 12)
 3) persistence model: value_D = value_{D-1} + delta, delta drawn from the last 60 daily changes
    (walk-forward; multiplicative for index series). Trade when model vs quote edge > EDGE.
 """
-import collections, math, os, sys
+import collections, os, sys
 from datetime import datetime
 from analyze import rd, fnum, fee
 from intraday import mean, boot

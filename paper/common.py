@@ -1,5 +1,6 @@
-"""Shared helpers for the paper trader: Kalshi API, maker fee, trade-through fill rule, stats."""
+"""Shared helpers: Kalshi API, fees, timestamp parsing, trade-through fill rule, stats."""
 import collections, json, math, random, time, urllib.parse, urllib.request
+from datetime import datetime
 
 BASE = "https://api.elections.kalshi.com/trade-api/v2"
 SERIES = ["KXHIGHNY", "KXHIGHCHI", "KXHIGHMIA", "KXHIGHAUS", "KXHIGHLAX", "KXHIGHDEN", "KXHIGHPHIL"]
@@ -26,6 +27,16 @@ def fnum(x):
         return float(x)
     except (TypeError, ValueError):
         return None
+
+
+def iso_ts(s):
+    """Epoch seconds of an ISO-8601 UTC string. Drops fractions: Python 3.9 rejects Kalshi's 5-digit ones."""
+    return datetime.fromisoformat(s[:19] + "+00:00").timestamp()
+
+
+def fee(p):
+    """Kalshi taker fee per contract, rounded up to the cent."""
+    return math.ceil(0.07 * p * (1 - p) * 100) / 100
 
 
 def mfee(p):

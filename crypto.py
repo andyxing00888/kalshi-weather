@@ -11,18 +11,13 @@ Usage: python3 crypto.py pull [days]   cache Kalshi markets/candles + Coinbase h
 """
 import collections, json, math, os, sys, time, urllib.request
 from datetime import datetime, timedelta, timezone
-from analyze import fee
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper"))
-from common import get, fnum, boot, mean  # noqa: E402
+from common import get, fnum, boot, mean, iso_ts, fee  # noqa: E402
 
 DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 CACHE = os.path.join(DATA, "cache_crypto")
 COINS = {"KXBTCD": "BTC-USD", "KXETHD": "ETH-USD"}
 STRIKE_BAND, HOURS, MAX_SPREAD = 0.04, (1, 3, 6, 12, 20), 0.05
-
-
-def iso(s):
-    return datetime.fromisoformat(s[:19] + "+00:00").timestamp()
 
 
 def spot_history(product, days):
@@ -63,9 +58,9 @@ def pull(days):
                 if not et.endswith("17") or et in evs:
                     continue
                 ms = get("/markets", event_ticker=et, limit=500)["markets"]
-                if not ms or iso(ms[0]["close_time"]) < since.timestamp():
+                if not ms or iso_ts(ms[0]["close_time"]) < since.timestamp():
                     continue
-                close = iso(ms[0]["close_time"])
+                close = iso_ts(ms[0]["close_time"])
                 s0 = spot.get(int(close - 24 * 3600))
                 if not s0:
                     continue
@@ -75,7 +70,7 @@ def pull(days):
                     cp = os.path.join(CACHE, m["ticker"] + ".json")
                     if not os.path.exists(cp):
                         cs = get(f"/series/{series}/markets/{m['ticker']}/candlesticks",
-                                 start_ts=int(max(iso(m["open_time"]), close - 26 * 3600)), end_ts=int(close),
+                                 start_ts=int(max(iso_ts(m["open_time"]), close - 26 * 3600)), end_ts=int(close),
                                  period_interval=60)["candlesticks"]
                         json.dump(cs, open(cp, "w"))
                         time.sleep(0.03)

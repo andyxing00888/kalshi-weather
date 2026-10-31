@@ -20,9 +20,8 @@ Hourly candle bid/ask are close-of-hour snapshots; any hit must be confirmed liv
 """
 import collections, csv, json, math, os, sys, time
 from datetime import datetime, timedelta, timezone
-from analyze import fee
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper"))
-from common import get, fnum  # noqa: E402
+from common import get, fnum, iso_ts, fee  # noqa: E402
 
 DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 CACHE = os.path.join(DATA, "cache")
@@ -37,10 +36,6 @@ RV_MAX_SPREAD = 0.10   # ladder strikes wider than this are not used as the mode
 RV_MAX_GAP = 30       # max index points between the two strikes interpolated
 RV_HOURS = [1, 2, 4, 6]
 PAPER_H, PAPER_EDGES = 6, (0.03, 0.06)  # forward-tested in paper/data/orders.csv
-
-
-def iso_ts(s):
-    return datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp()
 
 
 def settled_events(series, since):

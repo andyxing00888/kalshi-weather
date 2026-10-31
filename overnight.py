@@ -10,9 +10,8 @@ Needs data/cons_markets.json and its candle cache from `python3 consistency.py p
 Usage: python3 overnight.py [EDGE ...]   (default 0.03 0.06 0.10)
 """
 import collections, json, math, os, sys, urllib.request
-from analyze import fee
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper"))
-from common import fnum, boot, mean  # noqa: E402
+from common import fnum, boot, mean, iso_ts, fee  # noqa: E402
 import consistency as C  # noqa: E402
 
 SESSION_H, MAX_SPREAD = 6.5, 0.05
@@ -45,10 +44,10 @@ def main():
     es = yahoo("ES%3DF", "60m", "60d")
     spx = yahoo("%5EGSPC", "1d", "6mo")
     data = {k: v for k, v in json.load(open(C.MKTS)).items() if k.startswith("SPX")}
-    closes = sorted(C.iso_ts(v["range"][0]["close_time"]) for v in data.values())
+    closes = sorted(iso_ts(v["range"][0]["close_time"]) for v in data.values())
     R, brier = collections.defaultdict(list), collections.defaultdict(lambda: [0.0, 0.0, 0])
     for key, legs in data.items():
-        T = C.iso_ts(legs["range"][0]["close_time"])
+        T = iso_ts(legs["range"][0]["close_time"])
         prev_T = max((c for c in closes if c < T), default=None)
         if not legs.get("updown") or prev_T is None or T - prev_T > 4 * 86400:
             continue

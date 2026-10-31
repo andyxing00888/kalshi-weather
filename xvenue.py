@@ -13,9 +13,8 @@ Resolution rules can differ (postponements, overtime); check both before trading
 """
 import csv, json, os, re, sys, time, urllib.request
 from datetime import datetime, timedelta, timezone
-from analyze import fee
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper"))
-from common import get, fnum  # noqa: E402
+from common import get, fnum, fee, iso_ts  # noqa: E402
 
 GAMMA = "https://gamma-api.polymarket.com"
 LEAGUES = {"nba": "KXNBAGAME", "nfl": "KXNFLGAME", "nhl": "KXNHLGAME", "cfb": "KXNCAAFGAME",
@@ -140,7 +139,7 @@ def main():
     for g, team, kt, kb, ka, pb, pa in sorted(gaps, reverse=True)[:15]:
         print(f"  {g:+.3f}  {kt:38s} kalshi {kb:.2f}/{ka:.2f}  poly {pb:.3f}/{pa:.3f}")
     soon = datetime.now(timezone.utc) + timedelta(hours=LOG_HOURS)
-    rows = [r for r in rows if r["start"] and datetime.fromisoformat(r["start"].replace("Z", "+00:00")) <= soon]
+    rows = [r for r in rows if r["start"] and iso_ts(r["start"]) <= soon.timestamp()]
     if log and rows:
         new = not os.path.exists(LOG)
         os.makedirs(os.path.dirname(LOG), exist_ok=True)

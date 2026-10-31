@@ -12,10 +12,8 @@ Usage: python3 calib.py pull [days] [series] [per_series]   (defaults 21, 150, 4
        python3 calib.py                                      report
 """
 import collections, csv, json, os, random, sys, time
-from datetime import datetime
-from analyze import fee
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper"))
-from common import get, fnum, fill_pnl, boot, mean  # noqa: E402
+from common import get, fnum, fill_pnl, boot, mean, iso_ts, fee  # noqa: E402
 
 DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 CACHE = os.path.join(DATA, "cache_calib")
@@ -23,10 +21,6 @@ ROWS = os.path.join(DATA, os.environ.get("ROWS", "calib.csv"))
 HOURS = ("24", "3", "half")
 MIN_LIFE_H = 3
 MAX_SPREAD = 0.05
-
-
-def iso(s):
-    return datetime.fromisoformat(s[:19] + "+00:00").timestamp()
 
 
 def universe(days, max_pages=150):
@@ -37,7 +31,7 @@ def universe(days, max_pages=150):
             p["cursor"] = cur
         d = get("/markets", **p)
         out += [m for m in d["markets"] if m.get("result") in ("yes", "no")
-                and (iso(m["close_time"]) - iso(m["open_time"])) / 3600 >= MIN_LIFE_H]
+                and (iso_ts(m["close_time"]) - iso_ts(m["open_time"])) / 3600 >= MIN_LIFE_H]
         cur = d.get("cursor")
         if not cur:
             break
@@ -59,7 +53,7 @@ def pull(days, n_series, per_series):
     for i, s in enumerate(top):
         pool = [m for m in by[s] if (fnum(m.get("volume_fp")) or 0) >= 10]
         for m in rng.sample(pool, min(per_series, len(pool))):
-            t0, t1 = int(iso(m["open_time"])), int(iso(m["close_time"]))
+            t0, t1 = int(iso_ts(m["open_time"])), int(iso_ts(m["close_time"]))
             cp = os.path.join(CACHE, m["ticker"] + ".json")
             if os.path.exists(cp):
                 cs = json.load(open(cp))

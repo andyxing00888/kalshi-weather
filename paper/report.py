@@ -10,8 +10,7 @@ from datetime import datetime, timezone
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import dashboard  # noqa: E402
-from common import boot, mean  # noqa: E402
-from strategies import RULES  # noqa: E402
+from common import boot, mean, fee  # noqa: E402
 from trader import read, ORDERS, SCORED  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(HERE))
@@ -79,7 +78,6 @@ def summary_lines(byday, today, tf, day_pnl):
 def experiment_lines():
     """One-line status of the non-rule experiments that log on their own."""
     import lip
-    from analyze import fee
     rows = []
     try:
         L = lip.report(quiet=True)

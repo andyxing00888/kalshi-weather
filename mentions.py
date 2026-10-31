@@ -10,9 +10,8 @@ Usage: python3 mentions.py pull [n_series] [per_series]   (defaults 40, 150)
        python3 mentions.py [EDGE ...]                     (default 0.05 0.10 0.20)
 """
 import collections, csv, json, os, sys, time
-from analyze import fee
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper"))
-from common import get, fnum, boot, mean  # noqa: E402
+from common import get, fnum, boot, mean, iso_ts, fee  # noqa: E402
 import calib  # noqa: E402
 
 ROWS = os.path.join(calib.DATA, "calib_mentions.csv")
@@ -50,7 +49,7 @@ def pull(n_series, per_series):
         for m in ms:
             if (fnum(m.get("volume_fp")) or 0) < 10:
                 continue
-            t0, t1 = int(calib.iso(m["open_time"])), int(calib.iso(m["close_time"]))
+            t0, t1 = int(iso_ts(m["open_time"])), int(iso_ts(m["close_time"]))
             cp = os.path.join(calib.CACHE, m["ticker"] + ".json")
             if not os.path.exists(cp):
                 cs = get(f"/series/{s}/markets/{m['ticker']}/candlesticks",

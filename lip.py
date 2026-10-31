@@ -24,7 +24,7 @@ One order-book snapshot per market: competition and depth change during the day.
 import csv, json, os, sys, time
 from datetime import datetime
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper"))
-from common import get, fnum, mfee  # noqa: E402
+from common import get, fnum, mfee, iso_ts  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, "data")
@@ -33,10 +33,6 @@ TRACK = os.path.join(HERE, "paper", "data", "lip_track.csv")
 N_WATCH, MAX_CAPITAL, MAX_VOL24 = 40, 300, 500
 UNIT = 1e-4  # period_reward units -> dollars
 FILL_PX = 0.01
-
-
-def iso(s):
-    return datetime.fromisoformat(s[:19] + "+00:00").timestamp()
 
 
 def programs():
@@ -85,9 +81,9 @@ def plan(book, other_best, Q, target, disc):
 
 def main(Q):
     now = time.time()
-    progs = [p for p in programs() if iso(p["start_date"]) <= now < iso(p["end_date"])]
+    progs = [p for p in programs() if iso_ts(p["start_date"]) <= now < iso_ts(p["end_date"])]
     for p in progs:
-        days = max((iso(p["end_date"]) - iso(p["start_date"])) / 86400, 1 / 24)
+        days = max((iso_ts(p["end_date"]) - iso_ts(p["start_date"])) / 86400, 1 / 24)
         p["per_day"] = p["period_reward"] * UNIT / days
     progs.sort(key=lambda p: -p["per_day"])
     print(f"{len(progs)} live programs, headline ${sum(p['per_day'] for p in progs):,.0f}/day")
@@ -99,7 +95,7 @@ def main(Q):
     for k, p in enumerate(progs):
         t = p["market_ticker"]
         m = mk.get(t, {})
-        left = min(iso(p["end_date"]), iso(m["close_time"]) if m.get("close_time") else 1e12) - now
+        left = min(iso_ts(p["end_date"]), iso_ts(m["close_time"]) if m.get("close_time") else 1e12) - now
         if left < 6 * 3600:
             continue
         ob = get(f"/markets/{t}/orderbook")["orderbook_fp"]
@@ -193,7 +189,7 @@ def track(Q=300):
             y = plan(book["yes"], book["no"][0][0] if book["no"] else None, Q, target, disc)
             n = plan(book["no"], y["px"] if y else None, Q, target, disc) if y else None
             if y and n:
-                days = max((iso(p["end_date"]) - iso(p["start_date"])) / 86400, 1 / 24)
+                days = max((iso_ts(p["end_date"]) - iso_ts(p["start_date"])) / 86400, 1 / 24)
                 share = (y["mine"] / y["total"] + n["mine"] / n["total"]) / 2
                 # reward for the hour just elapsed is credited at the share we held at its start
                 held = float(last["share"]) if last else 0.0

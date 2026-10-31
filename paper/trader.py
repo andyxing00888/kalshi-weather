@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from common import get, fnum, fill_pnl, SERIES, ECON_SERIES, DIV_SERIES  # noqa: E402
+from common import get, fnum, fill_pnl, iso_ts, SERIES, ECON_SERIES, DIV_SERIES  # noqa: E402
 from strategies import RULES, ECON_RULES, DIV_RULES  # noqa: E402
 
 DATA = os.path.join(HERE, "data")
@@ -24,10 +24,6 @@ BOOKS = [(SERIES, HORIZONS, RULES), (ECON_SERIES, ECON_HORIZONS, ECON_RULES), (D
 OFIELDS = ["logged_utc", "log_ts", "hours_to_close", "rule", "H", "series", "event", "ticker",
            "side", "price", "bid", "ask", "mid"]
 SFIELDS = OFIELDS + ["scored_utc", "result", "filled", "pnl"]
-
-
-def ts(iso):
-    return datetime.fromisoformat(iso.replace("Z", "+00:00")).timestamp()
 
 
 def read(path):
@@ -68,7 +64,7 @@ def log():
         for m in get("/markets", series_ticker=s, status="open", limit=1000)["markets"]:
             events[m["event_ticker"]].append(m)
         for ev, ms in events.items():
-            h = (ts(ms[0]["close_time"]) - now) / 3600
+            h = (iso_ts(ms[0]["close_time"]) - now) / 3600
             H = next((H for H in horizons if H - 1 <= h < H + 1.5), None)
             if H is None or all((r, str(H), ev) in seen for r in rules):
                 continue

@@ -7,6 +7,8 @@ integer-rounded settlement so bucket probs use +-0.5 continuity correction.
 Reports Brier score of model vs market price at the chosen horizon.
 """
 import csv, math, os, random, sys, collections
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper"))
+from common import fee  # noqa: E402,F401  (re-exported for the older backtests)
 
 EDGE = float(os.environ.get("EDGE", 0.05))
 DIST = os.environ.get("DIST", "normal")      # normal | emp (kernel-smoothed residuals)
@@ -183,10 +185,6 @@ def main():
     for s_, rs in sorted(by.items()):
         print(f"{s_:11s}{len(rs):4d} {sum((r[1]-r[3])**2 for r in rs)/len(rs):9.4f} "
               f"{sum((r[2]-r[3])**2 for r in rs)/len(rs):9.4f}")
-
-
-def fee(p):
-    return math.ceil(0.07 * p * (1 - p) * 100) / 100
 
 
 if __name__ == "__main__":
