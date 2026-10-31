@@ -168,8 +168,8 @@ def main():
 
     recent = sorted((x[:-3] for x in os.listdir(REPORTS) if x.endswith(".md")), reverse=True)[:14]
     R = ["# Kalshi paper trading", "",
-         "Forward test of forecast-free rules on Kalshi daily-high temperature markets "
-         "(rules in [strategies.py](paper/strategies.py); backtest in [explore.py](paper/explore.py)). No real money.", "",
+         "Forward test of Kalshi strategies: forecast-free rules on weather, econ and a diversified non-sports "
+         "basket (rules in [strategies.py](paper/strategies.py)), plus the experiments below.", "",
          f"## Summary (as of {day})", "",
          *summary_lines(byday, today, tf, day_pnl), "",
          "Full dashboard: https://functionalleaf.github.io/kalshi-weather/", "",

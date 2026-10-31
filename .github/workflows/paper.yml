@@ -1,14 +1,15 @@
 name: paper-trade
 
+# GitHub drops many scheduled runs, so each run loops for ~5.5h (paper/cron.py) and the schedule
+# only has to fire now and then; the concurrency group queues the next loop behind the current one.
 on:
   schedule:
-    - cron: "5 * * * *"    # hourly: log orders for events ~30/24/18h before close
-    - cron: "45 15 * * *"  # daily: score settled orders and write the report
+    - cron: "7 */3 * * *"
   workflow_dispatch:
     inputs:
-      task:
-        description: "log, score, or both"
-        default: both
+      hours:
+        description: "loop length in hours (0 = one pass)"
+        default: "5.5"
 
 permissions:
   contents: write
@@ -20,33 +21,14 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Log
-        if: github.event.schedule == '5 * * * *' || (github.event_name == 'workflow_dispatch' && inputs.task != 'score')
-        run: python3 paper/trader.py log
-      - name: Arb scans (S&P/Nasdaq cross-series, Kalshi vs Polymarket sports)
-        if: github.event.schedule == '5 * * * *' || (github.event_name == 'workflow_dispatch' && inputs.task != 'score')
-        continue-on-error: true
-        run: |
-          python3 consistency.py log || echo "consistency scan failed"
-          python3 lip.py track || echo "lip track failed"
-          python3 xvenue.py log
-      - name: Score and report
-        if: github.event.schedule == '45 15 * * *' || (github.event_name == 'workflow_dispatch' && inputs.task != 'log')
-        run: python3 paper/trader.py score && python3 paper/report.py
-      - name: Refresh liquidity-reward watchlist
-        if: github.event.schedule == '45 15 * * *' || (github.event_name == 'workflow_dispatch' && inputs.task != 'log')
-        continue-on-error: true
-        run: mkdir -p data && python3 lip.py 300 && python3 lip.py watch && python3 lip.py report
-      - name: Commit
+      - name: Loop hourly and daily tasks
         run: |
           git config user.name "paper-trade-bot"
           git config user.email "paper-trade-bot@users.noreply.github.com"
-          git add paper/data paper/reports README.md docs
-          git diff --cached --quiet || git commit -m "paper: $(date -u +%Y-%m-%dT%H:%MZ)"
-          git pull --rebase && git push
+          python3 paper/cron.py "${{ inputs.hours || '5.5' }}"
