@@ -1,10 +1,10 @@
 """Day-ahead forecast highs per city from several NWP models (Open-Meteo previous-runs).
 
 Writes data/forecasts_multi.csv: series, date, one fc_<model> column per model.
-Usage: python3 pull_forecasts_multi.py START END   (YYYY-MM-DD)
+Usage: python3 -m legacy.pull_forecasts_multi START END   (YYYY-MM-DD)
 """
 import csv, json, os, sys, time, urllib.parse, urllib.request
-from pull_forecasts import CITIES, DATA
+from legacy.pull_forecasts import CITIES, DATA
 
 MODELS = ["gfs_seamless", "ecmwf_ifs025", "icon_seamless", "gem_seamless", "ukmo_seamless"]
 

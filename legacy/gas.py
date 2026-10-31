@@ -1,16 +1,18 @@
 """Gas test: does lagged RBOB wholesale gasoline predict the next AAA national average better than Kalshi?
 
 Needs data/econ_markets.csv, econ_candles.csv (see econ.py). Downloads data/rbob.json (Yahoo chart
-JSON for RB=F, 1y daily) if missing; REFRESH=1 re-downloads. Usage: python3 gas.py [hours_before_close ...]
+JSON for RB=F, 1y daily) if missing; REFRESH=1 re-downloads. Usage: python3 -m legacy.gas [hours_before_close ...]
 Model, walk-forward per event day D (resolves on AAA's price for D):
   dAAA_D = a + b * (RBOB 5-session change, using closes dated <= D-LAG), OLS on the prior 40 days,
   outcome distribution = prediction + prior residuals. Trade at quote when edge > EDGE, taker fee.
 """
 import collections, json, os, sys, urllib.request
 from datetime import date, datetime, timedelta, timezone
-from analyze import rd, fnum, fee
-from intraday import edate, mean, boot
-from econ import quote_at, ts, value, yes_if
+from kalshi.api import edate, fnum, iso_ts
+from kalshi.fees import fee
+from kalshi.stats import boot, mean
+from legacy.analyze import rd
+from legacy.econ import quote_at, value, yes_if
 
 EDGE = float(os.environ.get("EDGE", 0.05))
 LAG = int(os.environ.get("LAG", 1))  # 1: D-1 RBOB settle is known by the evening before close
@@ -78,7 +80,7 @@ def main():
             res = [r[2] - (a + b * r[1]) for r in hist]
             prev = aaa[D - timedelta(days=1)]
             for m in ev[D]:
-                q = quote_at(candles[m["ticker"]], ts(m["close_time"]) - H * 3600)
+                q = quote_at(candles[m["ticker"]], iso_ts(m["close_time"]) - H * 3600)
                 if not q:
                     continue
                 outs = [yes_if(m, prev + a + b * x + e) for e in res]

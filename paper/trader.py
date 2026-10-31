@@ -1,21 +1,21 @@
 """Forward paper trader for every rule in strategies.py. Reads public quotes; places no orders.
 
-  python3 paper/trader.py log     hourly: for events ~H hours before close (H in HORIZONS),
+  python3 -m paper.trader log     hourly: for events ~H hours before close (H in HORIZONS),
                                   snapshot all buckets and record each rule's resting orders
-  python3 paper/trader.py score   for settled logged orders: trade-through fill check + P&L
+  python3 -m paper.trader score   for settled logged orders: trade-through fill check + P&L
 Files: paper/data/orders.csv (append-only), paper/data/scored.csv (one row per scored order).
 """
-import collections, csv, os, sys, time
+import collections, os, sys, time
 from datetime import datetime, timezone
+from kalshi.api import get, fnum, iso_ts
+from kalshi.fills import fill_pnl
+from kalshi.paths import PAPER_DATA
+from kalshi.store import read, append
+from kalshi.universe import SERIES, ECON_SERIES, DIV_SERIES
+from paper.strategies import RULES, ECON_RULES, DIV_RULES
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
-from common import get, fnum, fill_pnl, iso_ts, SERIES, ECON_SERIES, DIV_SERIES  # noqa: E402
-from strategies import RULES, ECON_RULES, DIV_RULES  # noqa: E402
-
-DATA = os.path.join(HERE, "data")
-ORDERS = os.path.join(DATA, "orders.csv")
-SCORED = os.path.join(DATA, "scored.csv")
+ORDERS = os.path.join(PAPER_DATA, "orders.csv")
+SCORED = os.path.join(PAPER_DATA, "scored.csv")
 HORIZONS = [30, 24, 18]
 ECON_HORIZONS = [12, 6]
 # (series, horizons, rules) for each group traded
@@ -24,23 +24,6 @@ BOOKS = [(SERIES, HORIZONS, RULES), (ECON_SERIES, ECON_HORIZONS, ECON_RULES), (D
 OFIELDS = ["logged_utc", "log_ts", "hours_to_close", "rule", "H", "series", "event", "ticker",
            "side", "price", "bid", "ask", "mid"]
 SFIELDS = OFIELDS + ["scored_utc", "result", "filled", "pnl"]
-
-
-def read(path):
-    if not os.path.exists(path):
-        return []
-    with open(path) as f:
-        return list(csv.DictReader(f))
-
-
-def append(path, fields, rows):
-    os.makedirs(DATA, exist_ok=True)
-    new = not os.path.exists(path)
-    with open(path, "a", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=fields)
-        if new:
-            w.writeheader()
-        w.writerows(rows)
 
 
 def prev_mid(series, ticker, now):

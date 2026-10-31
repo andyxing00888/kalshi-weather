@@ -4,12 +4,14 @@
 2. Rule search on the first half of event dates, out-of-sample test on the second half:
    buy YES at ask or buy NO at (1 - bid) when the quote falls in a price bin, after fees.
 3. Dutch book: per event and hour, sum of YES asks < 1 (buy every bucket) or sum of bids > 1.
-Usage: python3 structural.py
+Usage: python3 -m legacy.structural
 """
 import collections
-from datetime import datetime
-from analyze import rd, fnum, fee
-from intraday import edate, boot, mean
+from kalshi.api import edate, fnum, iso_ts
+from kalshi.fees import fee
+from kalshi.stats import boot, mean
+from legacy.analyze import rd
+
 
 HORIZONS = [40, 30, 24, 18, 12]  # hours before close_time
 BINS = [0, .03, .06, .10, .15, .25, .40, .60, .75, .85, .90, .94, .97, 1.0]
@@ -34,7 +36,7 @@ def main():
     # quote at each horizon: (h, event, date, y, bid, ask)
     rows = []
     for m in markets:
-        close = int(datetime.fromisoformat(m["close_time"].replace("Z", "+00:00")).timestamp())
+        close = int(iso_ts(m["close_time"]))
         cs = candles[m["ticker"]]
         ts = sorted(cs)
         y = 1.0 if m["result"] == "yes" else 0.0

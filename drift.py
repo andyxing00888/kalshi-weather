@@ -7,8 +7,8 @@ Rules at 6h before close, taker at the quote: follow (buy YES if d > X, sell if 
 Usage: python3 drift.py [X ...]   (default 0.05 0.10 0.20)
 """
 import csv, json, os, sys
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper"))
-from common import boot, mean, fee  # noqa: E402
+from kalshi.fees import fee
+from kalshi.stats import boot, mean
 import calib  # noqa: E402
 
 FILES = {"sports": "calib.csv", "non-sports": "calib_nonsports.csv"}

@@ -18,15 +18,18 @@ Usage: python3 consistency.py pull [days]   cache settled 4pm events + hourly ca
        python3 consistency.py live          check current quotes on open events (with sizes)
 Hourly candle bid/ask are close-of-hour snapshots; any hit must be confirmed live.
 """
-import collections, csv, json, math, os, sys, time
+import collections, json, math, os, sys, time
 from datetime import datetime, timedelta, timezone
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper"))
-from common import get, fnum, iso_ts, fee  # noqa: E402
+from kalshi.api import get, fnum, iso_ts
+from kalshi.fees import fee
+from kalshi.fills import fill_pnl
+from kalshi.paths import DATA, PAPER_DATA
+from kalshi.stats import boot, mean
+from kalshi.store import read, append
 
-DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 CACHE = os.path.join(DATA, "cache")
 MKTS = os.path.join(DATA, "cons_markets.json")
-LIVE_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper", "data", "consistency.csv")
+LIVE_LOG = os.path.join(PAPER_DATA, "consistency.csv")
 # name: (range, above, updown, keep above strikes on this grid; None keeps all)
 FAMILIES = {"SPX": ("KXINX", "KXINXU", "KXINXDUD", None),
             "NDX": ("KXNASDAQ100", "KXNASDAQ100U", "KXNASDAQDUD", 100)}
@@ -249,7 +252,7 @@ def maker_quotes(fair, b, a, edge):
 def paper_rv(stamp):
     """Forward-test the updown maker rule: at ~6h before close, rest quotes around the ladder-implied
     P(close > D). Rows go into the trader's orders.csv so trader.py score fills and scores them."""
-    from trader import read, append, ORDERS, OFIELDS
+    from paper.trader import ORDERS, OFIELDS
     seen = {(r["rule"], r["H"], r["event"]) for r in read(ORDERS)}
     now, new = time.time(), []
     for fam, (rs, ab, ud, grid) in FAMILIES.items():
@@ -280,7 +283,6 @@ def rv():
     """Relative value: price updown and range buckets off the deep above-ladder, trade the thin series.
     taker: buy at the quote when fair beats it by RV_EDGE after taker fee.
     maker: rest a bid RV_EDGE under fair (or offer above), filled only on trade-through within 6h."""
-    from common import fill_pnl, boot, mean
     data = json.load(open(MKTS))
     res = collections.defaultdict(list)
     for key, legs in sorted(data.items()):
@@ -359,12 +361,7 @@ def live(log=False):
     if log:
         paper_rv(now)
     if log and rows:
-        new = not os.path.exists(LIVE_LOG)
-        with open(LIVE_LOG, "a", newline="") as f:
-            w = csv.DictWriter(f, fieldnames=list(rows[0]))
-            if new:
-                w.writeheader()
-            w.writerows(rows)
+        append(LIVE_LOG, list(rows[0]), rows)
 
 
 if __name__ == "__main__":

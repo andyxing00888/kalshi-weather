@@ -1,28 +1,16 @@
 """Pull settled Kalshi daily-high-temperature markets and hourly price candles.
 
-Usage: python3 pull_markets.py [max_days_per_series]
+Usage: python3 -m legacy.pull_markets [max_days_per_series]
 Writes data/markets.csv and data/candles.csv (resumable; cached per market).
-Other series: SERIES=KXTSAD,KXAAAGASD OUT=econ python3 pull_markets.py -> data/econ_markets.csv etc.
+Other series: SERIES=KXTSAD,KXAAAGASD OUT=econ python3 -m legacy.pull_markets -> data/econ_markets.csv etc.
 """
-import calendar, csv, json, os, sys, time, urllib.parse, urllib.request
+import calendar, csv, json, os, sys, time
+from kalshi.api import get
+from kalshi.paths import DATA
 
-BASE = "https://api.elections.kalshi.com/trade-api/v2"
-DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 SERIES = os.environ.get("SERIES", "").split(",") if os.environ.get("SERIES") else [
     "KXHIGHNY", "KXHIGHCHI", "KXHIGHMIA", "KXHIGHAUS", "KXHIGHLAX", "KXHIGHDEN", "KXHIGHPHIL"]
 PREFIX = os.environ["OUT"] + "_" if os.environ.get("OUT") else ""
-
-
-def get(path, **params):
-    url = f"{BASE}{path}?{urllib.parse.urlencode(params)}"
-    for attempt in range(5):
-        try:
-            with urllib.request.urlopen(url, timeout=30) as r:
-                return json.load(r)
-        except Exception as e:
-            time.sleep(1.5 * (attempt + 1))
-            err = e
-    raise RuntimeError(f"{url}: {err}")
 
 
 def settled_markets(series, max_events):

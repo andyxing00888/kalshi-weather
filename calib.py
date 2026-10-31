@@ -6,16 +6,18 @@ and scores, per category / series / price bin:
   taker  buy YES at ask, sell YES at bid (taker fee)
   maker  sell_longshot: offer YES at the ask when mid in [0.03, 0.15)
          buy_favorite:  bid YES at the bid when mid in [0.85, 0.97)   (the "high-probability bond")
-         filled only on a trade through the price within 6h (paper/common.fill_pnl), maker fee
+         filled only on a trade through the price within 6h (kalshi.fills.fill_pnl), maker fee
 Usage: python3 calib.py pull [days] [series] [per_series]   (defaults 21, 150, 40)
        EXCLUDE=Sports python3 calib.py pull ...              skip categories (comma list)
        python3 calib.py                                      report
 """
 import collections, csv, json, os, random, sys, time
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper"))
-from common import get, fnum, fill_pnl, boot, mean, iso_ts, fee  # noqa: E402
+from kalshi.api import get, fnum, iso_ts
+from kalshi.fees import fee
+from kalshi.fills import fill_pnl
+from kalshi.stats import boot, mean
+from kalshi.paths import DATA
 
-DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 CACHE = os.path.join(DATA, "cache_calib")
 ROWS = os.path.join(DATA, os.environ.get("ROWS", "calib.csv"))
 HOURS = ("24", "3", "half")

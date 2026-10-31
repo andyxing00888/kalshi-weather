@@ -1,20 +1,20 @@
 """Daily paper-trading report.
 
-  python3 paper/report.py [YYYY-MM-DD]   (default: today UTC)
+  python3 -m paper.report [YYYY-MM-DD]   (default: today UTC)
 Writes paper/reports/<date>.md (that day's settlements + cumulative stats) and README.md
 (cumulative scoreboard, links to recent reports).
 """
 import collections, os, sys
 from datetime import datetime, timezone
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
-import dashboard  # noqa: E402
-from common import boot, mean, fee  # noqa: E402
-from trader import read, ORDERS, SCORED  # noqa: E402
+from kalshi.fees import fee
+from kalshi.paths import ROOT, PAPER, PAPER_DATA
+from kalshi.stats import boot, mean
+from kalshi.store import read
+from paper import dashboard
+from paper.trader import ORDERS, SCORED
 
-sys.path.insert(0, os.path.dirname(HERE))
-REPORTS = os.path.join(HERE, "reports")
+REPORTS = os.path.join(PAPER, "reports")
 MIN_FILLS = 100  # fills before a verdict
 
 
@@ -65,7 +65,7 @@ def summary_lines(byday, today, tf, day_pnl):
         return ["_No filled contracts yet._"]
     pf = "∞" if M["pf"] == float("inf") else f"{M['pf']:.2f}"
     icon = lambda x: "🟢" if x > 0 else "🔴" if x < 0 else "⚪"
-    return [f"| Metric | Value |", "|---|--:|",
+    return ["| Metric | Value |", "|---|--:|",
             f"| {icon(M['total'])} Total P&L | **${M['total']:+.2f}** over {M['n']} fills |",
             f"| {icon(M['per'])} P&L / contract | {money(M['per'])} |",
             f"| Win rate | {M['win']:.0%} |",
@@ -87,18 +87,18 @@ def experiment_lines():
                          f"({L['settled']:g} settled, {L['open']:g} open) → **net ${L['net']:+,.2f}**"))
     except Exception as e:  # network or file trouble must not break the report
         rows.append(("Liquidity rewards (`lip.py`)", "—", f"error: {e}"))
-    c = read(os.path.join(HERE, "data", "consistency.csv"))
+    c = read(os.path.join(PAPER_DATA, "consistency.csv"))
     if c:
         arbs = [r for r in c if r["arb"] == "1"]
         best = max(float(r["edge"]) for r in c)
         rows.append(("S&P/Nasdaq cross-series arb (`consistency.py`)", f"{len({r['utc'] for r in c})} runs",
                      f"{len(arbs)} arbs after fees, best edge {best * 100:+.1f}¢"))
-    x = read(os.path.join(HERE, "data", "xvenue.csv"))
+    x = read(os.path.join(PAPER_DATA, "xvenue.csv"))
     if x:
         f = lambda v: float(v) if v not in ("", None) else None
         n = 0
         for r in x:
-            kb, ka, pb, pa = f(r["k_bid"]), f(r["k_ask"]), f(r["p_bid"]), f(r["p_ask"])
+            ka, pb = f(r["k_ask"]), f(r["p_bid"])
             if ka and pb and 0 < ka < 1 and 0 < pb < 1:
                 o = 1 - pb
                 n += 1 - ka - o - fee(ka) - 0.05 * o * (1 - o) > 0  # Polymarket sports taker fee
@@ -176,9 +176,9 @@ def main():
          table([(r["name"], r["fills"], r["per"], r["ci"], r["total"], r["verdict"]) for r in cum],
                ["Strategy", "Fills", "P&L / contract", "95% CI", "Total", "Verdict"]) if cum else "_No settled orders yet._",
          "", "## Daily reports", ""] + [f"- [{d}](paper/reports/{d}.md)" for d in recent]
-    with open(os.path.join(os.path.dirname(HERE), "README.md"), "w") as f:
+    with open(os.path.join(ROOT, "README.md"), "w") as f:
         f.write("\n".join(R) + "\n")
-    docs = os.path.join(os.path.dirname(HERE), "docs")
+    docs = os.path.join(ROOT, "docs")
     os.makedirs(docs, exist_ok=True)
     with open(os.path.join(docs, "index.html"), "w") as f:
         f.write(dashboard.render(orders, scored, cum, day, MIN_FILLS))

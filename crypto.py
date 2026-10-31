@@ -11,10 +11,11 @@ Usage: python3 crypto.py pull [days]   cache Kalshi markets/candles + Coinbase h
 """
 import collections, json, math, os, sys, time, urllib.request
 from datetime import datetime, timedelta, timezone
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper"))
-from common import get, fnum, boot, mean, iso_ts, fee  # noqa: E402
+from kalshi.api import get, fnum, iso_ts
+from kalshi.fees import fee
+from kalshi.stats import boot, mean
+from kalshi.paths import DATA
 
-DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 CACHE = os.path.join(DATA, "cache_crypto")
 COINS = {"KXBTCD": "BTC-USD", "KXETHD": "ETH-USD"}
 STRIKE_BAND, HOURS, MAX_SPREAD = 0.04, (1, 3, 6, 12, 20), 0.05

@@ -10,8 +10,9 @@ Usage: python3 mentions.py pull [n_series] [per_series]   (defaults 40, 150)
        python3 mentions.py [EDGE ...]                     (default 0.05 0.10 0.20)
 """
 import collections, csv, json, os, sys, time
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper"))
-from common import get, fnum, boot, mean, iso_ts, fee  # noqa: E402
+from kalshi.api import get, fnum, iso_ts
+from kalshi.fees import fee
+from kalshi.stats import boot, mean
 import calib  # noqa: E402
 
 ROWS = os.path.join(calib.DATA, "calib_mentions.csv")

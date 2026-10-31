@@ -1,8 +1,8 @@
 """Backtests on non-weather daily Kalshi series (gas, TSA, ERCOT, index ranges).
 
 Needs data/econ_markets.csv and data/econ_candles.csv from
-  SERIES=KXAAAGASD,KXTSAD,KXTXERCOTPEAKD,KXINX,KXNASDAQ100 OUT=econ python3 pull_markets.py 90
-Usage: python3 econ.py [hours_before_close ...]   (default 2 6 12)
+  SERIES=KXAAAGASD,KXTSAD,KXTXERCOTPEAKD,KXINX,KXNASDAQ100 OUT=econ python3 -m legacy.pull_markets 90
+Usage: python3 -m legacy.econ [hours_before_close ...]   (default 2 6 12)
 
 1) ladder arb: for one event, P(value > K) must fall as K rises; flag bid(K_hi) > ask(K_lo) + fees.
 2) price-bin calibration: buy YES at ask / NO at 1-bid by price bin, after taker fee.
@@ -10,16 +10,13 @@ Usage: python3 econ.py [hours_before_close ...]   (default 2 6 12)
    (walk-forward; multiplicative for index series). Trade when model vs quote edge > EDGE.
 """
 import collections, os, sys
-from datetime import datetime
-from analyze import rd, fnum, fee
-from intraday import mean, boot
+from kalshi.api import fnum, iso_ts
+from kalshi.fees import fee
+from kalshi.stats import boot, mean
+from legacy.analyze import rd
 
 EDGE = float(os.environ.get("EDGE", 0.05))
 LOG = {"KXINX", "KXNASDAQ100"}  # model changes as log returns
-
-
-def ts(s):
-    return datetime.strptime(s[:19], "%Y-%m-%dT%H:%M:%S").timestamp()
 
 
 def value(m):
@@ -59,7 +56,7 @@ def main():
         events[(m["series"], m["event"])].append(m)
 
     for series in sorted({s for s, _ in events}):
-        evs = sorted(((e, ms) for (s, e), ms in events.items() if s == series), key=lambda x: ts(x[1][0]["close_time"]))
+        evs = sorted(((e, ms) for (s, e), ms in events.items() if s == series), key=lambda x: iso_ts(x[1][0]["close_time"]))
         vals = [value(ms[0]) for _, ms in evs]
         print(f"\n=== {series}: {len(evs)} events, {sum(len(ms) for _, ms in evs)} markets")
 
@@ -87,7 +84,7 @@ def main():
             bins = collections.defaultdict(list)
             model = []
             for k, (e, ms) in enumerate(evs):
-                t = ts(ms[0]["close_time"]) - H * 3600
+                t = iso_ts(ms[0]["close_time"]) - H * 3600
                 prev = vals[k - 1] if k else None
                 hist = [(vals[j] / vals[j - 1] if series in LOG else vals[j] - vals[j - 1])
                         for j in range(max(1, k - 60), k) if vals[j] is not None and vals[j - 1]]

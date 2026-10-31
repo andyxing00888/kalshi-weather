@@ -1,17 +1,16 @@
 """Backtest every rule in strategies.py on settled markets, maker fills with trade-through.
 
-Usage: python3 paper/explore.py [H ...]   (hours before close, default 36 30 24 18)
+Usage: python3 -m paper.explore [H ...]   (hours before close, default 36 30 24 18)
 Reports per rule x horizon, by first/second half of event dates, event-clustered 95% CIs.
 """
 import collections, json, os, sys
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.dirname(HERE))
-from analyze import rd, DATA  # noqa: E402
-from intraday import edate  # noqa: E402
-from common import boot, mean, fnum as f, fill_pnl  # noqa: E402
-from strategies import RULES  # noqa: E402
-from datetime import datetime  # noqa: E402
+from kalshi.api import edate, fnum as f, iso_ts
+from kalshi.fills import fill_pnl
+from kalshi.paths import DATA
+from kalshi.stats import boot, mean
+from kalshi.store import read
+from paper.strategies import RULES
 
 
 def quote(cs, t):
@@ -25,11 +24,11 @@ def quote(cs, t):
 
 def main():
     hs = [int(a) for a in sys.argv[1:]] or [36, 30, 24, 18]
-    markets = rd("markets.csv")
+    markets = read(os.path.join(DATA, "markets.csv"))
     ev = collections.defaultdict(list)
     for m in markets:
         m["cs"] = json.load(open(os.path.join(DATA, "cache", m["ticker"] + ".json")))
-        m["close"] = datetime.fromisoformat(m["close_time"].replace("Z", "+00:00")).timestamp()
+        m["close"] = iso_ts(m["close_time"])
         ev[m["event"]].append(m)
     dates = sorted({edate(e) for e in ev})
     split = dates[len(dates) // 2]

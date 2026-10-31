@@ -1,16 +1,16 @@
 """Long-running driver for GitHub Actions: GitHub drops many scheduled runs, so one job loops instead.
 
-  python3 paper/cron.py [hours]   run the hourly tasks now and then at :05 each hour for `hours`
+  python3 -m paper.cron [hours]   run the hourly tasks now and then at :05 each hour for `hours`
                                   (0 = once), the daily tasks once per UTC day after DAILY_HOUR,
                                   committing and pushing after every pass
 A failing task is reported and skipped; it never stops the loop.
 """
 import os, subprocess, sys, time
 from datetime import datetime, timezone
+from kalshi.paths import ROOT, PAPER
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-HOURLY = ["python3 paper/trader.py log", "python3 consistency.py log", "python3 lip.py track", "python3 xvenue.py log"]
-DAILY = ["python3 paper/trader.py score", "python3 paper/report.py",
+HOURLY = ["python3 -m paper.trader log", "python3 consistency.py log", "python3 lip.py track", "python3 xvenue.py log"]
+DAILY = ["python3 -m paper.trader score", "python3 -m paper.report",
          "mkdir -p data && python3 lip.py 300 && python3 lip.py watch"]
 DAILY_HOUR = 15
 MINUTE = 5
@@ -36,7 +36,7 @@ def commit():
 
 
 def daily_due(now):
-    return now.hour >= DAILY_HOUR and not os.path.exists(os.path.join(ROOT, "paper", "reports", f"{now:%Y-%m-%d}.md"))
+    return now.hour >= DAILY_HOUR and not os.path.exists(os.path.join(PAPER, "reports", f"{now:%Y-%m-%d}.md"))
 
 
 def one_pass():

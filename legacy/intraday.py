@@ -5,41 +5,20 @@ At check hour T (local standard time, which is the NWS climate-day clock) on eac
   mu = max(M, Hf) + walk-forward bias, Hf = bias-corrected 5-model day-ahead forecast high
   final high ~ Normal(mu, sigma) truncated below at M - 1, sigma from earlier days' residuals.
 Compared against the last hourly candle at or before T.
-Usage: python3 intraday.py [T ...]   (default 11 13 15)
+Usage: python3 -m legacy.intraday [T ...]   (default 11 13 15)
 Needs data/markets.csv, candles.csv, forecasts_multi.csv, obs.csv.
 """
 import collections, math, os, sys
 from datetime import datetime, timedelta, timezone
-from analyze import rd, cdf, fnum, fee
+from kalshi.api import edate, fnum
+from kalshi.fees import fee
+from kalshi.stats import boot, cdf, mean
+from legacy.analyze import rd
 
 EDGE = float(os.environ.get("EDGE", 0.05))
 STD_OFFSET = {"KXHIGHNY": -5, "KXHIGHCHI": -6, "KXHIGHMIA": -5, "KXHIGHAUS": -6,
               "KXHIGHLAX": -8, "KXHIGHDEN": -7, "KXHIGHPHIL": -5}
 MODELS = ["gfs_seamless", "ecmwf_ifs025", "icon_seamless", "gem_seamless", "ukmo_seamless"]
-MON = dict(JAN=1, FEB=2, MAR=3, APR=4, MAY=5, JUN=6, JUL=7, AUG=8, SEP=9, OCT=10, NOV=11, DEC=12)
-
-
-def edate(ev):
-    s = ev.split("-")[-1]
-    return f"20{s[:2]}-{MON[s[2:5]]:02d}-{s[5:7]}"
-
-
-def mean(xs):
-    return sum(xs) / len(xs)
-
-
-def boot(xs, keys, n=2000):
-    import random
-    rng = random.Random(0)
-    g = collections.defaultdict(list)
-    for k, x in zip(keys, xs):
-        g[k].append(x)
-    gs, ms = list(g.values()), []
-    for _ in range(n):
-        pick = [x for grp in rng.choices(gs, k=len(gs)) for x in grp]
-        ms.append(sum(pick) / len(pick))
-    ms.sort()
-    return ms[int(.025 * n)], ms[int(.975 * n)]
 
 
 def bucket_p(m, mu, s, floor):

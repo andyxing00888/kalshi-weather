@@ -11,10 +11,12 @@ Usage: python3 xvenue.py          print matched games, gaps and arbs
 Polymarket is read-only here: it is not open to US persons except via Polymarket US.
 Resolution rules can differ (postponements, overtime); check both before trading an arb.
 """
-import csv, json, os, re, sys, time, urllib.request
+import json, os, re, sys, time, urllib.request
 from datetime import datetime, timedelta, timezone
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper"))
-from common import get, fnum, fee, iso_ts  # noqa: E402
+from kalshi.api import get, fnum, iso_ts
+from kalshi.fees import fee
+from kalshi.paths import PAPER_DATA
+from kalshi.store import append
 
 GAMMA = "https://gamma-api.polymarket.com"
 LEAGUES = {"nba": "KXNBAGAME", "nfl": "KXNFLGAME", "nhl": "KXNHLGAME", "cfb": "KXNCAAFGAME",
@@ -22,7 +24,7 @@ LEAGUES = {"nba": "KXNBAGAME", "nfl": "KXNFLGAME", "nhl": "KXNHLGAME", "cfb": "K
 POLY_FEE = 0.05
 MAX_SPREAD = 0.03
 LOG_HOURS = 48  # log only games starting within this many hours
-LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper", "data", "xvenue.csv")
+LOG = os.path.join(PAPER_DATA, "xvenue.csv")
 FIELDS = ["utc", "league", "game", "team", "start", "k_bid", "k_ask", "k_bid_size", "k_ask_size",
           "p_bid", "p_ask", "p_liq", "k_ticker", "p_token"]
 
@@ -141,13 +143,7 @@ def main():
     soon = datetime.now(timezone.utc) + timedelta(hours=LOG_HOURS)
     rows = [r for r in rows if r["start"] and iso_ts(r["start"]) <= soon.timestamp()]
     if log and rows:
-        new = not os.path.exists(LOG)
-        os.makedirs(os.path.dirname(LOG), exist_ok=True)
-        with open(LOG, "a", newline="") as f:
-            w = csv.DictWriter(f, fieldnames=FIELDS)
-            if new:
-                w.writeheader()
-            w.writerows(rows)
+        append(LOG, FIELDS, rows)
         print(f"logged {len(rows)} rows to {LOG}")
 
 

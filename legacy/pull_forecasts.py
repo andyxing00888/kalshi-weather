@@ -2,11 +2,11 @@
 
 Writes data/forecasts.csv: series, date (local), fc_high_f (forecast issued the
 previous day, max of hourly temps over the local calendar day).
-Usage: python3 pull_forecasts.py START END   (YYYY-MM-DD)
+Usage: python3 -m legacy.pull_forecasts START END   (YYYY-MM-DD)
 """
 import csv, json, os, sys, urllib.parse, urllib.request, time
+from kalshi.paths import DATA
 
-DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 # series -> (lat, lon, tz) at the settlement station
 CITIES = {
     "KXHIGHNY":   (40.779, -73.969, "America/New_York"),

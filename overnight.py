@@ -10,8 +10,9 @@ Needs data/cons_markets.json and its candle cache from `python3 consistency.py p
 Usage: python3 overnight.py [EDGE ...]   (default 0.03 0.06 0.10)
 """
 import collections, json, math, os, sys, urllib.request
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper"))
-from common import fnum, boot, mean, iso_ts, fee  # noqa: E402
+from kalshi.api import fnum, iso_ts
+from kalshi.fees import fee
+from kalshi.stats import boot, mean
 import consistency as C  # noqa: E402
 
 SESSION_H, MAX_SPREAD = 6.5, 0.05

@@ -1,10 +1,10 @@
 """Hourly ASOS temperature observations per settlement station from Iowa Environmental Mesonet.
 
 Writes data/obs.csv: series, valid_utc, tmpf.
-Usage: python3 pull_obs.py START END   (YYYY-MM-DD, inclusive)
+Usage: python3 -m legacy.pull_obs START END   (YYYY-MM-DD, inclusive)
 """
 import csv, os, sys, time, urllib.request
-from pull_forecasts import DATA
+from legacy.pull_forecasts import DATA
 
 STATIONS = {"KXHIGHNY": "NYC", "KXHIGHCHI": "MDW", "KXHIGHMIA": "MIA", "KXHIGHAUS": "AUS",
             "KXHIGHLAX": "LAX", "KXHIGHDEN": "DEN", "KXHIGHPHIL": "PHL"}

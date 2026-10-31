@@ -6,12 +6,13 @@ At H hours before close, for each market by mid price:
 Filled only if a later trade within WINDOW hours prints strictly through the order price
 (trade low < bid, or trade high > ask), which builds in adverse selection.
 P&L after Kalshi maker fee. Event-clustered CIs, split by first/second half of dates.
-Usage: python3 maker.py
+Usage: python3 -m legacy.maker
 """
 import collections, json, math, os
-from datetime import datetime
-from analyze import rd, DATA
-from intraday import edate, boot, mean
+from kalshi.api import edate, iso_ts
+from kalshi.paths import DATA
+from kalshi.stats import boot, mean
+from legacy.analyze import rd
 
 WINDOW = 6
 
@@ -33,7 +34,7 @@ def main():
         fills = collections.Counter()
         for m in markets:
             cs = json.load(open(os.path.join(DATA, "cache", m["ticker"] + ".json")))
-            close = datetime.fromisoformat(m["close_time"].replace("Z", "+00:00")).timestamp()
+            close = iso_ts(m["close_time"])
             t0 = close - H * 3600
             before = [c for c in cs if c["end_period_ts"] <= t0]
             after = [c for c in cs if t0 < c["end_period_ts"] <= t0 + WINDOW * 3600]

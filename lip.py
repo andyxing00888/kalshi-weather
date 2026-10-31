@@ -23,13 +23,13 @@ One order-book snapshot per market: competition and depth change during the day.
 """
 import csv, json, os, sys, time
 from datetime import datetime
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "paper"))
-from common import get, fnum, mfee, iso_ts  # noqa: E402
+from kalshi.api import get, fnum, iso_ts
+from kalshi.fees import mfee
+from kalshi.paths import DATA, PAPER_DATA
+from kalshi.store import append
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-DATA = os.path.join(HERE, "data")
-WATCH = os.path.join(HERE, "paper", "data", "lip_watch.json")
-TRACK = os.path.join(HERE, "paper", "data", "lip_track.csv")
+WATCH = os.path.join(PAPER_DATA, "lip_watch.json")
+TRACK = os.path.join(PAPER_DATA, "lip_track.csv")
 N_WATCH, MAX_CAPITAL, MAX_VOL24 = 40, 300, 500
 UNIT = 1e-4  # period_reward units -> dollars
 FILL_PX = 0.01
@@ -197,13 +197,8 @@ def track(Q=300):
                            reward=round(p["period_reward"] * UNIT / days * held * row["hours"] / 24, 4))
         out.append(row)
         time.sleep(0.05)
-    new = not os.path.exists(TRACK)
-    with open(TRACK, "a", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["ts", "utc", "ticker", "kind", "yes_px", "no_px", "share", "reward",
-                                          "hours", "side", "price", "size"])
-        if new:
-            w.writeheader()
-        w.writerows(out)
+    append(TRACK, ["ts", "utc", "ticker", "kind", "yes_px", "no_px", "share", "reward",
+                   "hours", "side", "price", "size"], out)
     q = [r for r in out if r["kind"] == "quote"]
     print(f"lip track: {len(q)} quotes, reward this run ${sum(r['reward'] for r in q):.2f}, "
           f"fills {sum(r['size'] for r in out if r['kind'] == 'fill'):g} contracts")
